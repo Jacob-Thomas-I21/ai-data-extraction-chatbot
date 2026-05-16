@@ -41,7 +41,29 @@ An AI-powered chatbot that lets users query structured e-commerce and customer s
 - **Node.js 18+** (for the React frontend)
 - **Anthropic API key** ([console.anthropic.com](https://console.anthropic.com))
 
-## Setup & Installation
+## Quick Start
+
+```bash
+git clone <repo-url>
+cd ai-data-extractor
+
+# Setup
+python -m venv venv
+venv\Scripts\activate          # On macOS/Linux: source venv/bin/activate
+pip install -r requirements.txt
+cd frontend && npm install && cd ..
+cp .env.example .env           # Add your API key
+
+# Seed & run
+python seed.py
+python start.py                # Starts both backend + frontend
+```
+
+Open **http://localhost:5173** and start asking questions.
+
+---
+
+## Manual Setup & Installation
 
 ### 1. Clone the repository
 
@@ -84,18 +106,22 @@ Expected output:
   → interactions: 19 rows
 ```
 
-### 5. Start the backend
-
-```bash
-uvicorn backend.main:app --reload --port 8000
-```
-
-### 6. Start the frontend (separate terminal)
+### 5. Install frontend dependencies
 
 ```bash
 cd frontend
 npm install
-npm run dev
+```
+
+### 6. Run both servers
+
+```bash
+# Option A: Single command (recommended)
+python start.py
+
+# Option B: Separate terminals
+uvicorn backend.main:app --reload --port 8000   # Terminal 1
+cd frontend && npm run dev                       # Terminal 2
 ```
 
 The app will be available at **http://localhost:5173**
@@ -194,7 +220,8 @@ pytest tests/ -v --tb=short
 
 ```
 ai-data-extractor/
-├── data/                      # Raw CSV sample data
+├── ecommerce/                 # E-commerce CSV sample data
+├── support/                   # Support CSV sample data
 ├── sql/schema.sql             # Database DDL
 ├── backend/
 │   ├── main.py                # FastAPI app + routes
@@ -202,12 +229,13 @@ ai-data-extractor/
 │   ├── database.py            # SQLAlchemy engine + models
 │   ├── seed.py                # Database seeding
 │   └── agent/
-│       ├── nl_agent.py        # Claude NL→SQL pipeline
+│       ├── nl_agent.py        # Claude/GPT NL→SQL pipeline
 │       ├── schema_context.py  # DB introspection → prompt
-│       └── tools.py           # Claude tool definitions
+│       └── tools.py           # LLM tool definitions
 ├── frontend/                  # React 18 + Vite
 ├── tests/                     # pytest test suite
 ├── seed.py                    # Convenience seed script
+├── start.py                   # Run backend + frontend together
 └── README.md
 ```
 
