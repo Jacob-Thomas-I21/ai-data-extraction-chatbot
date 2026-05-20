@@ -1,7 +1,7 @@
 """Core NL→SQL agent — orchestrates LLM tool-calling to translate
 natural language into SQL, execute it, and return human-readable answers.
 
-Supports both Anthropic (Claude) and OpenAI (GPT) providers.
+Supports Grok (xAI, default), Anthropic (Claude), and OpenAI (GPT) providers.
 Includes in-memory conversation history for follow-up questions.
 """
 
@@ -233,6 +233,75 @@ class OpenAIAgent:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# GROK (xAI) PROVIDER — DEFAULT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class GrokAgent:
+    """NL→SQL agent using Grok via xAI's OpenAI-compatible API."""
+
+    def __init__(self, system_prompt: str):
+        from openai import OpenAI
+        self.client = OpenAI(
+            api_key=settings.grok_api_key,
+            base_url=settings.grok_base_url,
+        )
+        self.system_prompt = system_prompt
+        self.model = settings.grok_model
+        log.info("agent.initialized", provider="grok", model=self.model)
+
+    def call(self, history: list[dict]) -> dict[str, Any]:
+        sql_used = None
+        data = None
+
+        # Grok uses the same message format as OpenAI
+        messages = [{"role": "system", "content": self.system_prompt}] + history
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            tools=OPENAI_TOOLS,
+            max_tokens=4096,
+        )
+
+        msg = response.choices[0].message
+
+        while msg.tool_calls:
+            # Add assistant message with tool calls
+            history.append(msg.model_dump(exclude_none=True))
+
+            for tool_call in msg.tool_calls:
+                args = json.loads(tool_call.function.arguments)
+                sql = args.get("sql", "")
+                sql_used = sql
+
+                log.info("agent.tool_call", tool=tool_call.function.name, sql=sql[:100])
+
+                result_text, result_data, is_error = _handle_tool_call(sql, settings.database_url)
+                if result_data is not None:
+                    data = result_data
+
+                history.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": result_text,
+                })
+
+            messages = [{"role": "system", "content": self.system_prompt}] + history
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                tools=OPENAI_TOOLS,
+                max_tokens=4096,
+            )
+            msg = response.choices[0].message
+
+        answer = msg.content or ""
+        history.append({"role": "assistant", "content": answer})
+
+        return {"answer": answer, "data": data, "sql_used": sql_used}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # MAIN AGENT (provider-agnostic wrapper)
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -246,8 +315,10 @@ class NLAgent:
 
         if self.provider == "openai":
             self._agent = OpenAIAgent(system_prompt)
-        else:
+        elif self.provider == "anthropic":
             self._agent = AnthropicAgent(system_prompt)
+        else:
+            self._agent = GrokAgent(system_prompt)
 
     def process(self, message: str, conversation_id: str | None = None) -> dict[str, Any]:
         """Process a natural language query and return a structured response."""

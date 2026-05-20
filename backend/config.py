@@ -19,14 +19,19 @@ SQL_DIR = PROJECT_ROOT / "sql"
 class Settings(BaseSettings):
     """App configuration loaded from environment / .env file."""
 
-    # LLM provider: "anthropic" or "openai"
-    llm_provider: str = "anthropic"
+    # LLM provider: "grok" (default), "anthropic", or "openai"
+    llm_provider: str = "grok"
 
-    # Anthropic
+    # Grok / xAI (default provider)
+    grok_api_key: str = ""
+    grok_model: str = "grok-4.3"
+    grok_base_url: str = "https://api.x.ai/v1"
+
+    # Anthropic (optional)
     anthropic_api_key: str = ""
     claude_model: str = "claude-sonnet-4-20250514"
 
-    # OpenAI
+    # OpenAI (optional)
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
 

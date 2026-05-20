@@ -1,7 +1,7 @@
 """Tool definitions for LLM providers.
 
 TOOLS         — Anthropic format (used by Claude)
-OPENAI_TOOLS  — OpenAI format (used by GPT)
+OPENAI_TOOLS  — OpenAI format (used by GPT and Grok)
 """
 
 # ─── Anthropic Format ─────────────────────────────────────────────────────────
